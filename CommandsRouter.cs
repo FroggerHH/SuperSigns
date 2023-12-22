@@ -24,10 +24,12 @@ public static class CommandsRouter
         var args = str.Split(' ').ToList();
         if (SS_commands.TryGetValue(args[0], out var command))
         {
-            args.Remove(args[0]);
+            args.Remove(args[0]); 
             var consoleCommandException = command.Execute(args);
-            consoleCommandException =
-                new ConsoleCommandException("Command execution failed with error: " + consoleCommandException.Message);
+            if (consoleCommandException is not null)
+                consoleCommandException =
+                    new ConsoleCommandException("Command execution failed with error: "
+                                                + consoleCommandException.Message);
             return consoleCommandException;
         }
 
