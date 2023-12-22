@@ -1,6 +1,3 @@
 ﻿namespace SuperSigns.Controllers;
 
-public abstract class SSCommandController
-{
-    public abstract ConsoleCommandException Execute(List<string> args);
-}
+public abstract class SSCommandController : SSCommandBranch;

@@ -6,7 +6,6 @@ namespace SuperSigns;
 public static class TerminalCommands
 {
     private static string currentCommand;
-    private static ConsoleCommandException currentCommandException;
 
     [HarmonyPatch(typeof(Terminal), nameof(Terminal.InitTerminal)), HarmonyPostfix]
     private static void AddCommands()
@@ -18,11 +17,12 @@ public static class TerminalCommands
                 {
                     if (!IsAdmin) throw new ConsoleCommandException("You are not an admin on this server");
                     if (args.Length < 2) throw new ConsoleCommandException("First argument must be ss commands name");
-                    if (currentCommandException != null) throw currentCommandException;
+                    if (CommandsRouter.currentCommandException != null) throw CommandsRouter.currentCommandException;
                     if (!CommandsRouter.commandNames.Contains(args[1]))
                         throw new ConsoleCommandException("Unknown ss command");
                     var runCommandException = CommandsRouter.RunCommand(currentCommand);
-                    if (runCommandException != null) throw runCommandException;
+                    if (runCommandException.status != CommandStatus.Ok)
+                        throw new ConsoleCommandException(runCommandException.exceptionMessage);
                 }, args);
             }, true, optionsFetcher: GetCommandOptions);
     }
@@ -35,7 +35,7 @@ public static class TerminalCommands
         string[] strArray1 = __instance.m_input.text.Split(' ');
         var word = strArray1[strArray1.Length - 1];
         __instance.updateSearch(word, GetCommandOptions(), false);
-        bool isCommandValid = currentCommandException is null;
+        bool isCommandValid = CommandsRouter.currentCommandException is null;
         string validStr = isCommandValid ? "<color=#00FF00>✔</color>" : "<color=#F8733C>❌</color>";
         __instance.m_search.text = validStr + GetCommandTooltip() + __instance.m_search.text;
     }
@@ -59,7 +59,7 @@ public static class TerminalCommands
 
     private static string GetCommandTooltip()
     {
-        currentCommandException = null;
+        CommandsRouter.currentCommandException = null;
         if (!currentCommand.IsGood()) return string.Empty;
         if (!currentCommand.StartsWith("ss")) return string.Empty;
         string available = $"<u>Available commands</u>:\n";
@@ -77,7 +77,8 @@ public static class TerminalCommands
             {
                 if (args.Count == 1 && !currentCommand.EndsWith(" "))
                 {
-                    currentCommandException = new ConsoleCommandException($"Got no arguments in signSettings command");
+                    CommandsRouter.currentCommandException =
+                        new ConsoleCommandException($"Got no arguments in signSettings command");
                     return "<b>SignSettings</b> - controls the super sign behaviour\n"
                            + "Parameters:\n"
                            + " Activation mode: In which case the code in the sign will be executed\n"
@@ -88,23 +89,24 @@ public static class TerminalCommands
 
                 // if ((args.Count == 2 && currentCommand.EndsWith(" ")) || args.Count > 4)
                 // {
-                //     currentCommandException =
+                //     CommandsRouter.currentCommandException =
                 //         new ConsoleCommandException("Too many arguments. Expected 3 or 4 arguments");
-                //     return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                //     return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
                 // }
 
                 if (args.Count == 1 && currentCommand.EndsWith(" "))
                 {
-                    currentCommandException = new ConsoleCommandException($"Got no arguments in signSettings command");
+                    CommandsRouter.currentCommandException =
+                        new ConsoleCommandException($"Got no arguments in signSettings command");
                     return available;
                 }
 
                 if (args.Count == 2 && args[1] != "activationmode" && args[1] != "editingpermissions"
                     && args[1] != "activationpermissions")
                 {
-                    currentCommandException =
+                    CommandsRouter.currentCommandException =
                         new ConsoleCommandException($"Unknown signSettings second argument {args[1]}");
-                    return available + $"<color=yellow>{currentCommandException.Message}</color>\n";
+                    return available + $"<color=yellow>{CommandsRouter.currentCommandException.Message}</color>\n";
                 }
 
                 if (args.Count == 2 && !currentCommand.EndsWith(" "))
@@ -112,35 +114,35 @@ public static class TerminalCommands
                     var secondArg = args[1].ToLower();
                     if (secondArg == "activationmode")
                     {
-                        currentCommandException =
+                        CommandsRouter.currentCommandException =
                             new ConsoleCommandException($"Got no activationMode argument in signSettings command");
                         return "Activation mode: In which case the code in the sign will be executed\n"
                                + " Expected values: BasicInteract / Hover / InRange / Loaded\n";
                     } else if (secondArg == "editingpermissions")
                     {
-                        currentCommandException =
+                        CommandsRouter.currentCommandException =
                             new ConsoleCommandException($"Got no editingPermissions argument in signSettings command");
                         return "Editing permissions: Who can change the contents of the sign\n"
                                + " Expected values: Admin / Permitted / Anyone / SteamIds\n";
                     } else if (secondArg == "activationpermissions")
                     {
-                        currentCommandException =
+                        CommandsRouter.currentCommandException =
                             new ConsoleCommandException(
                                 $"Got no activationPermissions argument in signSettings command");
                         return "Activation Permissions: Who can trigger the sign code\n"
                                + " Expected values: Admin / Permitted / Anyone / SteamIds\n";
                     } else
                     {
-                        currentCommandException =
+                        CommandsRouter.currentCommandException =
                             new ConsoleCommandException($"Unknown signSettings arg second argument {secondArg}");
-                        return $"<color=yellow>{currentCommandException.Message}</color>\n";
+                        return $"<color=yellow>{CommandsRouter.currentCommandException.Message}</color>\n";
                     }
                 }
 
                 if (args.Count == 2 && currentCommand.EndsWith(" "))
                 {
                     var secondArg = args[1].ToLower();
-                    currentCommandException =
+                    CommandsRouter.currentCommandException =
                         new ConsoleCommandException($"Got no {secondArg} argument in signSettings command");
                     return available;
                 }
@@ -156,9 +158,10 @@ public static class TerminalCommands
                             && thirdArg != "inrange"
                             && thirdArg != "loaded")
                         {
-                            currentCommandException =
+                            CommandsRouter.currentCommandException =
                                 new ConsoleCommandException($"Unknown signSettings third argument {thirdArg}");
-                            return available + $"<color=yellow>{currentCommandException.Message}</color>\n";
+                            return available
+                                   + $"<color=yellow>{CommandsRouter.currentCommandException.Message}</color>\n";
                         }
 
                         if (thirdArg == "basicinteract")
@@ -172,9 +175,9 @@ public static class TerminalCommands
                         if (thirdArg == "loaded")
                             return "Loaded: Code is executed when the sign is loaded\n";
 
-                        currentCommandException =
+                        CommandsRouter.currentCommandException =
                             new ConsoleCommandException($"Unknown signSettings third argument {thirdArg}");
-                        return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                        return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
                     } else if (secondArg == "editingpermissions")
                     {
                         return "Editing permissions: Who can change the contents of the sign\n"
@@ -183,9 +186,9 @@ public static class TerminalCommands
                     {
                     } else
                     {
-                        currentCommandException =
+                        CommandsRouter.currentCommandException =
                             new ConsoleCommandException($"Unknown signSettings arg second argument {secondArg}");
-                        return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                        return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
                     }
                 }
 
@@ -197,16 +200,16 @@ public static class TerminalCommands
 
                     if (secondArg == "activationmode")
                     {
-                        currentCommandException = new("Too many arguments");
-                        return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                        CommandsRouter.currentCommandException = new("Too many arguments");
+                        return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
                     }
 
                     if (secondArg == "editingpermissions")
                     {
                         if (thirdArg != "steamids")
                         {
-                            currentCommandException = new("Too many arguments");
-                            return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                            CommandsRouter.currentCommandException = new("Too many arguments");
+                            return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
                         }
 
                         return "SteamIds: Who can change the contents of the sign\n";
@@ -220,13 +223,13 @@ public static class TerminalCommands
                     return available;
                 else
                 {
-                    currentCommandException = new("Too many arguments");
-                    return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                    CommandsRouter.currentCommandException = new("Too many arguments");
+                    return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
                 }
 
-                currentCommandException =
+                CommandsRouter.currentCommandException =
                     new ConsoleCommandException("Unknown error occurred. Inform the developer about this");
-                return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
             }
             case "give":
             {
@@ -239,9 +242,9 @@ public static class TerminalCommands
                            + CommandsRouter.commandNames.GetString();
                 if ((args.Count == 4 && currentCommand.EndsWith(" ")) || args.Count > 4)
                 {
-                    currentCommandException =
+                    CommandsRouter.currentCommandException =
                         new ConsoleCommandException("Too many arguments. Expected 3 or 4 arguments");
-                    return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                    return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
                 }
 
                 if ((args.Count == 2 && !currentCommand.EndsWith(" "))
@@ -254,9 +257,9 @@ public static class TerminalCommands
                     || (args.Count == 3 && currentCommand.EndsWith(" ")))
                     return "Player nickname(optional): Which player to give. <color=yellow>Without spaces.</color>\n";
 
-                currentCommandException =
+                CommandsRouter.currentCommandException =
                     new ConsoleCommandException("Unknown error occurred. Inform the developer about this");
-                return $"<color=#F8733C>{currentCommandException.Message}</color>\n";
+                return $"<color=#F8733C>{CommandsRouter.currentCommandException.Message}</color>\n";
             }
             case "highlight":
             {
@@ -272,11 +275,11 @@ public static class TerminalCommands
 
         if (CommandsRouter.commandNames.Any(x => x.ToLower().StartsWith(startOfNewCommand)))
         {
-            currentCommandException = new ConsoleCommandException("Unknown ss command");
+            CommandsRouter.currentCommandException = new ConsoleCommandException("Unknown ss command");
             return available;
         }
 
-        currentCommandException = new ConsoleCommandException("Unknown ss command");
+        CommandsRouter.currentCommandException = new ConsoleCommandException("Unknown ss command");
         return "Unknown ss command\n";
     }
 

@@ -106,11 +106,11 @@
     <ItemGroup>
         <Compile Include="CodeSign.cs" />
         <Compile Include="CommandsRouter.cs" />
+        <Compile Include="CommandStatus.cs" />
+        <Compile Include="Controllers\Ping\Branches\NoPongBranch.cs" />
+        <Compile Include="Controllers\Ping\Branches\PongBranch.cs" />
+        <Compile Include="Controllers\Ping\PingSsCommand.cs" />
         <Compile Include="Controllers\SSCommandController.cs" />
-        <Compile Include="Controllers\GiveSsCommand.cs" />
-        <Compile Include="Controllers\HighlightSsCommand.cs" />
-        <Compile Include="Controllers\PingSsCommand.cs" />
-        <Compile Include="Controllers\SignSettingsSsCommand.cs" />
         <Compile Include="GlobalUsings.cs" />
         <Compile Include="Patch\AlwaysActive.cs" />
         <Compile Include="Patch\InspectSign.cs" />
@@ -118,6 +118,8 @@
         <Compile Include="Patch\ZoneLimits.cs" />
         <Compile Include="Plugin.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="SSCommandBranch.cs" />
+        <Compile Include="SSCommandParameter.cs" />
         <Compile Include="TerminalCommands.cs" />
     </ItemGroup>
     <ItemGroup>
