@@ -1,10 +1,11 @@
 ﻿namespace SuperSigns.Controllers;
 
-public class HighlightCommand : CommandController
+public class PingSsCommand : SSCommandController
 {
     public override ConsoleCommandException Execute(List<string> args)
     {
-        Debug($"HighlightCommand executed");
+        Debug($"PingSsCommand executed");
+        m_localPlayer.Message(Center, "Pong");
         return null;
     }
 }

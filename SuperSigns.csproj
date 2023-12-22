@@ -104,14 +104,17 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="CodeSign.cs" />
         <Compile Include="CommandsRouter.cs" />
-        <Compile Include="Controllers\CommandController.cs" />
-        <Compile Include="Controllers\GiveCommand.cs" />
-        <Compile Include="Controllers\HighlightCommand.cs" />
-        <Compile Include="Controllers\PingCommand.cs" />
+        <Compile Include="Controllers\SSCommandController.cs" />
+        <Compile Include="Controllers\GiveSsCommand.cs" />
+        <Compile Include="Controllers\HighlightSsCommand.cs" />
+        <Compile Include="Controllers\PingSsCommand.cs" />
+        <Compile Include="Controllers\SignSettingsSsCommand.cs" />
         <Compile Include="GlobalUsings.cs" />
         <Compile Include="Patch\AlwaysActive.cs" />
         <Compile Include="Patch\InspectSign.cs" />
+        <Compile Include="Patch\MakeSignCodeable.cs" />
         <Compile Include="Patch\ZoneLimits.cs" />
         <Compile Include="Plugin.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />

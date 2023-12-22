@@ -1,6 +1,6 @@
 ﻿namespace SuperSigns.Controllers;
 
-public class GiveCommand : CommandController
+public class GiveSsCommand : SSCommandController
 {
     public override ConsoleCommandException Execute(List<string> args)
     {
@@ -16,7 +16,7 @@ public class GiveCommand : CommandController
         ZRoutedRpc.instance.InvokeRoutedRPC(ZRoutedRpc.Everybody, "SS_GiveItem",
             targetPlayer, itemPrefabName, count);
 
-        Debug($"GiveCommand executed");
+        Debug($"GiveSsCommand executed");
         return null;
     }
 
@@ -34,7 +34,7 @@ file static class GiveCommandPatch
     [HarmonyPatch(typeof(Game), nameof(Game.Start)), HarmonyPostfix]
     private static void Postfix()
     {
-        ZRoutedRpc.instance.Register<string, string, int>("SS_GiveItem", GiveCommand.GiveItem);
+        ZRoutedRpc.instance.Register<string, string, int>("SS_GiveItem", GiveSsCommand.GiveItem);
         DebugWarning("SS_GiveItem RPC registered", false);
     }
 }
