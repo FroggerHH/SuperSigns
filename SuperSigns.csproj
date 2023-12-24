@@ -107,6 +107,11 @@
         <Compile Include="CodeSign.cs" />
         <Compile Include="CommandsRouter.cs" />
         <Compile Include="CommandStatus.cs" />
+        <Compile Include="Controllers\Longer\Branches\FirstPodBranch.cs" />
+        <Compile Include="Controllers\Longer\Branches\FirstBranch.cs" />
+        <Compile Include="Controllers\Longer\Branches\SecondBranch.cs" />
+        <Compile Include="Controllers\Longer\LongerSSCommand.cs" />
+        <Compile Include="Controllers\Message\MessageSSCommand.cs" />
         <Compile Include="Controllers\Ping\Branches\NoPongBranch.cs" />
         <Compile Include="Controllers\Ping\Branches\PongBranch.cs" />
         <Compile Include="Controllers\Ping\PingSsCommand.cs" />

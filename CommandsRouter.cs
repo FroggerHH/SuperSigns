@@ -1,22 +1,27 @@
-﻿using SuperSigns.Controllers;
+﻿using System.Text;
+using SuperSigns.Controllers;
+using SuperSigns.Controllers.Longer;
+using SuperSigns.Controllers.Message;
 using SuperSigns.Controllers.Ping;
 
 namespace SuperSigns;
 
 public static class CommandsRouter
 {
-    public static readonly Dictionary<string, SSCommandController> SS_commands = new();
+    public static readonly Dictionary<string, SSCommandController> SS_commands;
     public static readonly List<string> commandNames;
-    public static ConsoleCommandException currentCommandException;
+    public static string currentCommand;
 
     static CommandsRouter()
     {
         SS_commands = new();
         SS_commands.Add("ping", new PingSsCommand());
+        SS_commands.Add("longer", new LongerSSCommand());
+        SS_commands.Add("longer", new MessageSSCommand());
         commandNames = SS_commands.Keys.ToList();
     }
 
-    public static (CommandStatus status, string exceptionMessage) RunCommand(string str)
+    public static (CommandStatus status, string exceptionMessage) TryRunCommand(string str)
     {
         str = str.Replace("ss ", "");
         Debug($"Got a ss command for execution -> '{str}'");
@@ -37,109 +42,212 @@ public static class CommandsRouter
 
         (CommandStatus status, string exceptionMessage) Logic()
         {
-            Debug($"Logic 0");
             if (!SS_commands.TryGetValue(commandName, out SSCommandController baseCommand))
             {
-                Debug($"Logic 1, not found");
+                Debug($"SS command {commandName} not found");
                 return (CommandStatus.None, $"SS command {commandName} not found");
             }
 
             args.Remove(commandName);
             string exceptionMessage;
-            var status = CommandStatus.None;
 
-            // if (baseCommand.branches.Count == 0) (status, exceptionMessage) = baseCommand.Execute(str);
-            // else
-            // {
-            Debug($"Logic 2");
-            SSCommandBranch lastBranch = baseCommand;
-            Dictionary<string, object> parameters = null;
-            for (int i = 0; i < args.Count; i++)
+            if (!GetParameters(str, out var parameters, out exceptionMessage))
+                return (CommandStatus.Error, exceptionMessage);
+            if (!GetBranch(str, out var lastBranch, out exceptionMessage))
+                return (CommandStatus.Error, exceptionMessage);
+            if (!CheckParameters(parameters, lastBranch, out exceptionMessage))
+                return (CommandStatus.Error, exceptionMessage);
+
+            if (lastBranch!.parameters.Count != 0 && lastBranch.branches.Count != 0)
+                throw new Exception(
+                    "SSCommandBranch can not have both parameters and branches at the same time. "
+                    + $"Thrown by {lastBranch.callName}.");
+
+
+            Debug($"Logic 4, lastBranch = '{lastBranch?.ToString() ?? "null"}', parameters = '{parameters.Select(pair
+                => pair.Key + ":" + pair.Value).GetString()}'");
+
+            return lastBranch.Execute(parameters);
+        }
+    }
+    //ss longer second message:lol postfix:--
+
+    public static bool GetParameters(string commandline, out Dictionary<string, object> result, out string errorMessage)
+    {
+        commandline = commandline.Replace("ss ", "");
+        errorMessage = string.Empty;
+        var args = commandline.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(x => x.Contains(':')).ToList();
+        result = new();
+
+        foreach (var arg in args)
+        {
+            var list_ = arg.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (list_.Count != 2)
             {
-                var arg = args[i];
-                Debug($"Logic 2, arg = '{arg}'");
-                //parameters are compatible with branches
-                if (lastBranch!.parameters.Count != 0 && lastBranch.branches.Count != 0)
-                    throw new Exception(
-                        "SSCommandBranch can not have both parameters and branches at the same time. "
-                        + $"Thrown by {lastBranch.callName}.");
-                //If branch has parameters skip finding next branch and instead start collecting parameters
-                if (lastBranch.parameters.Count != 0)
-                {
-                    parameters ??= new();
-                    //Collecting parameters
-                    var isParameter = arg.Contains(':');
-                    var list_ = arg.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-                    if (!isParameter || list_.Count != 2)
-                        return (CommandStatus.Error, $"Command parameter {arg} is not in valid format. "
-                                                     + $"Should be 'parameterName:value'");
-                    string paramName = list_[0];
-                    string paramValueStr = list_[1];
-                    var parameter = lastBranch.parameters.Find(x => x.name == paramName);
-                    if (!parameter)
-                        return (CommandStatus.Error,
-                            $"Branch {lastBranch.callName} do not have parameter {paramName}");
-                    if (parameters.ContainsKey(paramName))
-                        return (CommandStatus.Error,
-                            $"Parameter {paramName} has been given to the command {lastBranch.callName}");
-                    object paramValue;
-
-                    try
-                    {
-                        paramValue = Convert.ChangeType(paramValueStr, parameter.type);
-                    }
-                    catch (InvalidCastException e)
-                    {
-                        return (CommandStatus.Error,
-                            $"{paramName} value is not in valid cast format, "
-                            + $"can not cast {paramValueStr} to {parameter.type}.\n{e.Message}");
-                    }
-                    catch (FormatException e)
-                    {
-                        return (CommandStatus.Error,
-                            $"{paramName} value is not in valid format of {parameter.type}.\n{e.Message}");
-                    }
-                    catch (OverflowException e)
-                    {
-                        return (CommandStatus.Error,
-                            $"{paramName} value represents a number that is"
-                            + $" out of the range of {parameter.type}.\n{e.Message}");
-                    }
-                    catch (Exception e)
-                    {
-                        return (CommandStatus.Error,
-                            $"Unknown error casting {paramValueStr} to {parameter.type}.\n{e.Message}");
-                    }
-
-                    parameters.Add(paramName, paramValue);
-
-                    //When we finally collected all parameters execute the branch
-                    if (parameters.Count == lastBranch.parameters.Count)
-                        return lastBranch.Execute(parameters);
-                }
-
-                //Finding the last branch
-                if (lastBranch.branches.Count != 0)
-                {
-                    var command = lastBranch.branches.Find(x => x.callName == arg);
-                    Debug($"Looking for nex branch, command = {command?.ToString() ?? "null"}");
-                    if (!command) return (CommandStatus.None, $"Command branch with name {arg} do not exists");
-                    lastBranch = command;
-                    continue;
-                }
-                //If branch have neither branches and neither parameters just execute it
-                else return lastBranch.Execute(new());
+                errorMessage = $"Command parameter {arg} is not in valid format. Should be 'parameterName:value'";
+                Debug($"GetParameters -> {errorMessage}");
+                return false;
             }
 
-            Debug($"Logic 3, lastBranch = '{lastBranch?.ToString() ?? "null"}'");
-
-            return (CommandStatus.Error, "Unknown ERROR");
-            // }
+            string paramName = list_[0];
+            string paramValueStr = list_[1];
+            result.Add(paramName, paramValueStr);
         }
+
+        Debug($"GetParameters result = {result.GetString()}");
+
+        return true;
+    }
+
+    public static bool GetBranch(string commandline, [CanBeNull] out SSCommandBranch lastBranch,
+        out string errorMessage)
+    {
+        commandline = commandline.Replace("ss ", "");
+        lastBranch = null;
+        errorMessage = string.Empty;
+        var args = commandline.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Where(x => !x.Contains(':'))
+            .ToList();
+
+        if (!SS_commands.TryGetValue(args[0], out var baseCommand))
+        {
+            errorMessage = $"Command {args[0]} not found";
+            Debug($"GetBranch -> {errorMessage}");
+            return false;
+        }
+
+        args.Remove(args[0]);
+
+        Debug($"GetBranch, baseCommand = {baseCommand.displayName}");
+        lastBranch = baseCommand;
+        foreach (var arg in args)
+        {
+            var command = lastBranch.branches.Find(x => x.callName == arg);
+            if (!command)
+            {
+                errorMessage = $"Command branch with name {arg} do not exists in {lastBranch.callName} command";
+                Debug($"GetBranch -> {errorMessage}");
+                return false;
+            }
+
+            lastBranch = command;
+        }
+
+        if (lastBranch.canBeCalled == false)
+        {
+            errorMessage = $"Command {lastBranch.callName} can not be called directly. Use one of its branches";
+            return false;
+        }
+
+        Debug($"GetBranch result = {lastBranch.displayName}");
+
+        return true;
+    }
+
+    public static bool CheckParameters(Dictionary<string, object> args, SSCommandBranch command,
+        out string errorMessage)
+    {
+        errorMessage = string.Empty;
+        if (args.Count < command.parameters.Where(x => x.isOptional == false).Count())
+        {
+            errorMessage = $"Branch {command.callName} do not have all required parameters";
+            return false;
+        }
+
+        foreach (var arg in args)
+        {
+            string paramName = arg.Key;
+            object paramValueStr = arg.Value;
+            SSCommandParameter parameter = command.parameters.Find(x => x.name == paramName);
+            if (!parameter)
+            {
+                errorMessage = $"Branch {command.callName} do not have parameter called '{paramName}'";
+                return false;
+            }
+
+            try
+            {
+                paramValueStr = Convert.ChangeType(paramValueStr, parameter.type);
+            }
+            catch (InvalidCastException e)
+            {
+                errorMessage = $"{paramName} value is not in valid cast format, "
+                               + $"can not cast {paramValueStr} to {parameter.type}.\n{e.Message}";
+                return false;
+            }
+            catch (FormatException e)
+            {
+                errorMessage = $"{paramName} value is not in valid format of {parameter.type}.\n{e.Message}";
+                return false;
+            }
+            catch (OverflowException e)
+            {
+                errorMessage =
+                    $"{paramName} value represents a number that is out of the range of {parameter.type}.\n{e.Message}";
+                return false;
+            }
+            catch (Exception e)
+            {
+                errorMessage = $"Unknown error casting {paramValueStr} to {parameter.type}.\n{e.Message}";
+                return false;
+            }
+        }
+
+        return true;
     }
 
 
-    public static string GetTooltip(string commandline) { return ""; }
+    public static bool GetTooltip(out string result)
+    {
+        result = string.Empty;
+        if (currentCommand.Replace(" ", "").Replace("ss", "").Length == 0) 
+        {
+            result = $"<u>Available commands:</u>\n{CommandsRouter.commandNames.GetString()}";
+            return true;
+        }
 
-    public static List<string> GetOptions(string commandline) { return new(); }
+        if (!GetBranch(currentCommand, out var lastBranch, out var errorMessage))
+        {
+            result = errorMessage;
+            return false;
+        }
+
+        var sb = new StringBuilder();
+        sb.Append("<u>");
+        sb.Append(lastBranch.displayName);
+        sb.Append("</u>");
+        sb.Append(" - ");
+        sb.Append(lastBranch.description);
+        if (lastBranch.branches.Count > 0)
+        {
+            sb.AppendLine(" Branches:");
+            foreach (var branch in lastBranch.branches)
+            {
+                sb.Append("  <b>");
+                sb.Append(branch.displayName);
+                sb.Append("</b>");
+                sb.Append(" - ");
+                sb.Append(branch.description);
+            }
+        }
+
+        if (lastBranch.parameters.Count > 0)
+        {
+            sb.AppendLine(" Parameters:");
+            foreach (var parameter in lastBranch.parameters)
+            {
+                sb.Append("  <b>");
+                sb.Append(parameter.displayName);
+                sb.Append("</b>");
+                sb.Append(parameter.isOptional ? " (optional)" : "");
+                sb.Append(" - ");
+                sb.Append(parameter.description);
+            }
+        }
+
+        result = sb.ToString();
+        return true;
+    }
+
+    public static List<string> GetOptions() { return new(); }
 }

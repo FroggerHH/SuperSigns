@@ -8,8 +8,8 @@ public class PingSsCommand : SSCommandController
         callName = "ping";
         displayName = "Ping";
         description = "Fun ping-pong command";
-        parentBranch = null;
-        branches.Add(new PongBranch(this));
-        // branches.Add(CreateNoPongBranch());
+        // parentBranch = null;
+        branches.Add(new PongBranch());
+        branches.Add(new NoPongBranch());
     }
 }

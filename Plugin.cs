@@ -17,13 +17,11 @@ public class Plugin : BaseUnityPlugin
         ModGUID = $"com.{ModAuthor}.{ModName}",
         ModAuthor = "JustAFrogger";
 
-    private static ConfigEntry<bool> doubleSize;
     public static readonly int signHash = "sign".GetStableHashCode();
-
-
+    
     private void Awake()
     {
         CreateMod(this, ModName, ModAuthor, ModVersion, ModGUID);
-        doubleSize = config("General", "_", true, "");
+        // exampleConfigEntry = config("General", "_", true, "");
     }
 }

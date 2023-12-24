@@ -2,13 +2,12 @@
 
 public class PongBranch : SSCommandBranch
 {
-    public PongBranch(SSCommandBranch parentBranch) : base(parentBranch)
+    public PongBranch()
     {
-        Debug($"Init of PongBranch");
         callName = "pong";
         displayName = "Pong";
         description = "Returns pong";
-        this.parentBranch = parentBranch;
+        // this.parentBranch = CommandsRouter.SS_commands["ping"];
     }
 
     public override (CommandStatus, string) Execute(Dictionary<string, object> parameters)

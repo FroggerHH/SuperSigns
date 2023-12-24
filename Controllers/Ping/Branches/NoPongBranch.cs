@@ -2,12 +2,12 @@
 
 public class NoPongBranch : SSCommandBranch
 {
-    public NoPongBranch(SSCommandBranch parentBranch) : base(parentBranch)
+    public NoPongBranch()
     {
         callName = "nopong";
         displayName = "No Pong";
         description = "Returns nothing looking like a pong";
-        this.parentBranch = parentBranch;
+        // this.parentBranch = CommandsRouter.SS_commands["ping"];
     }
 
     public override (CommandStatus, string) Execute(Dictionary<string, object> parameters)
