@@ -27,8 +27,9 @@ public static class TerminalCommands
         CommandsRouter.currentCommand = __instance.m_input.text;
         if (!CommandsRouter.currentCommand.StartsWith("ss ")) return;
         bool isCommandValid = CommandsRouter.GetTooltip(out string tooltip);
-        string validStr = isCommandValid ? "<color=#00FF00>✔</color>" : "<color=#F8733C>❌</color>";
-        __instance.m_search.text = validStr + tooltip + __instance.m_search.text;
+        // string validStr = isCommandValid ? "<color=#00FF00>✔</color>" : "<color=#F8733C>❌</color>";
+        __instance.updateSearch("", CommandsRouter.GetOptions(), false);
+        __instance.m_search.text = tooltip + __instance.m_search.text;
     }
 
     [HarmonyPatch(typeof(ConsoleCommand), nameof(ConsoleCommand.GetTabOptions)), HarmonyPostfix]

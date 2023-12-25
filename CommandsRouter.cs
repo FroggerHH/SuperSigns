@@ -8,6 +8,7 @@ namespace SuperSigns;
 
 public static class CommandsRouter
 {
+    private static readonly List<SSCommandController> commands;
     public static readonly Dictionary<string, SSCommandController> SS_commands;
     public static readonly List<string> commandNames;
     public static string currentCommand;
@@ -15,10 +16,14 @@ public static class CommandsRouter
     static CommandsRouter()
     {
         SS_commands = new();
-        SS_commands.Add("ping", new PingSsCommand());
-        SS_commands.Add("longer", new LongerSSCommand());
-        SS_commands.Add("longer", new MessageSSCommand());
-        commandNames = SS_commands.Keys.ToList();
+        commands = new();
+
+        commands.Add(new PingSsCommand());
+        commands.Add(new LongerSSCommand());
+        commands.Add(new MessageSSCommand());
+
+        commandNames = commands.Select(x => x.callName).ToList();
+        SS_commands = commands.ToDictionary(x => x.callName, x => x);
     }
 
     public static (CommandStatus status, string exceptionMessage) TryRunCommand(string str)
@@ -28,7 +33,7 @@ public static class CommandsRouter
         var args = str.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
         var commandName = args[0];
         Debug($"commandName = '{commandName}'");
-        (CommandStatus status, string exceptionMessage) logic = Logic();
+        var logic = Logic();
         Debug($"status = '{logic.status}', exceptionMessage = '{logic.exceptionMessage}'");
         if (logic.status != CommandStatus.Ok)
         {
@@ -42,7 +47,7 @@ public static class CommandsRouter
 
         (CommandStatus status, string exceptionMessage) Logic()
         {
-            if (!SS_commands.TryGetValue(commandName, out SSCommandController baseCommand))
+            if (!SS_commands.TryGetValue(commandName, out var baseCommand))
             {
                 Debug($"SS command {commandName} not found");
                 return (CommandStatus.None, $"SS command {commandName} not found");
@@ -55,7 +60,7 @@ public static class CommandsRouter
                 return (CommandStatus.Error, exceptionMessage);
             if (!GetBranch(str, out var lastBranch, out exceptionMessage))
                 return (CommandStatus.Error, exceptionMessage);
-            if (!CheckParameters(parameters, lastBranch, out exceptionMessage))
+            if (!CheckParameters(ref parameters, lastBranch, out exceptionMessage))
                 return (CommandStatus.Error, exceptionMessage);
 
             if (lastBranch!.parameters.Count != 0 && lastBranch.branches.Count != 0)
@@ -78,7 +83,7 @@ public static class CommandsRouter
         errorMessage = string.Empty;
         var args = commandline.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(x => x.Contains(':')).ToList();
-        result = new();
+        result = new Dictionary<string, object>();
 
         foreach (var arg in args)
         {
@@ -90,8 +95,8 @@ public static class CommandsRouter
                 return false;
             }
 
-            string paramName = list_[0];
-            string paramValueStr = list_[1];
+            var paramName = list_[0];
+            var paramValueStr = list_[1];
             result.Add(paramName, paramValueStr);
         }
 
@@ -144,7 +149,7 @@ public static class CommandsRouter
         return true;
     }
 
-    public static bool CheckParameters(Dictionary<string, object> args, SSCommandBranch command,
+    public static bool CheckParameters(ref Dictionary<string, object> args, SSCommandBranch command,
         out string errorMessage)
     {
         errorMessage = string.Empty;
@@ -154,11 +159,13 @@ public static class CommandsRouter
             return false;
         }
 
+        var newArgs = new Dictionary<string, object>(args);
+
         foreach (var arg in args)
         {
-            string paramName = arg.Key;
-            object paramValueStr = arg.Value;
-            SSCommandParameter parameter = command.parameters.Find(x => x.name == paramName);
+            var paramName = arg.Key;
+            var paramValue = arg.Value;
+            var parameter = command.parameters.Find(x => x.name == paramName);
             if (!parameter)
             {
                 errorMessage = $"Branch {command.callName} do not have parameter called '{paramName}'";
@@ -167,12 +174,12 @@ public static class CommandsRouter
 
             try
             {
-                paramValueStr = Convert.ChangeType(paramValueStr, parameter.type);
+                paramValue = Convert.ChangeType(paramValue, parameter.type);
             }
             catch (InvalidCastException e)
             {
                 errorMessage = $"{paramName} value is not in valid cast format, "
-                               + $"can not cast {paramValueStr} to {parameter.type}.\n{e.Message}";
+                               + $"can not cast {paramValue} to {parameter.type}.\n{e.Message}";
                 return false;
             }
             catch (FormatException e)
@@ -188,10 +195,15 @@ public static class CommandsRouter
             }
             catch (Exception e)
             {
-                errorMessage = $"Unknown error casting {paramValueStr} to {parameter.type}.\n{e.Message}";
+                errorMessage = $"Unknown error casting {paramValue} to {parameter.type}.\n{e.Message}";
                 return false;
             }
+
+            newArgs.Add(paramName, paramValue);
+            Debug($"Parameter {paramName} = {paramValue}, type = {paramValue.GetType()}");
         }
+
+        args = newArgs;
 
         return true;
     }
@@ -200,54 +212,77 @@ public static class CommandsRouter
     public static bool GetTooltip(out string result)
     {
         result = string.Empty;
-        if (currentCommand.Replace(" ", "").Replace("ss", "").Length == 0) 
+        var sb = new StringBuilder();
+        var available = "<u>Available commands:</u>\n";
+        if (currentCommand.Replace(" ", "").Replace("ss", "").Length == 0)
         {
-            result = $"<u>Available commands:</u>\n{CommandsRouter.commandNames.GetString()}";
+            result = available + $"{commandNames.GetString()}";
             return true;
         }
 
-        if (!GetBranch(currentCommand, out var lastBranch, out var errorMessage))
+        SSCommandBranch lastBranch;
+        string errorMessage;
+        var branchFound = GetBranch(currentCommand, out lastBranch, out errorMessage);
+        if (currentCommand.EndsWith(" "))
         {
-            result = errorMessage;
-            return false;
-        }
-
-        var sb = new StringBuilder();
-        sb.Append("<u>");
-        sb.Append(lastBranch.displayName);
-        sb.Append("</u>");
-        sb.Append(" - ");
-        sb.Append(lastBranch.description);
-        if (lastBranch.branches.Count > 0)
-        {
-            sb.AppendLine(" Branches:");
-            foreach (var branch in lastBranch.branches)
+            if (!branchFound)
             {
-                sb.Append("  <b>");
-                sb.Append(branch.displayName);
-                sb.Append("</b>");
-                sb.Append(" - ");
-                sb.Append(branch.description);
+                result = errorMessage;
+                return false;
             }
-        }
 
-        if (lastBranch.parameters.Count > 0)
-        {
-            sb.AppendLine(" Parameters:");
-            foreach (var parameter in lastBranch.parameters)
+            sb.Append("<u>");
+            sb.Append(lastBranch.displayName);
+            sb.Append("</u>");
+            sb.Append(" - ");
+            sb.Append(lastBranch.description);
+            if (lastBranch.branches.Count > 0)
             {
-                sb.Append("  <b>");
-                sb.Append(parameter.displayName);
-                sb.Append("</b>");
-                sb.Append(parameter.isOptional ? " (optional)" : "");
-                sb.Append(" - ");
-                sb.Append(parameter.description);
+                sb.AppendLine(" Branches:");
+                foreach (var branch in lastBranch.branches)
+                {
+                    sb.Append("  <b>");
+                    sb.Append(branch.displayName);
+                    sb.Append("</b>");
+                    sb.Append(" - ");
+                    sb.Append(branch.description + "\n");
+                }
+            } else if (lastBranch.parameters.Count > 0)
+            {
+                sb.AppendLine(" Parameters:");
+                foreach (var parameter in lastBranch.parameters)
+                {
+                    sb.Append("  <b>");
+                    sb.Append(parameter.displayName);
+                    sb.Append("</b>");
+                    sb.Append(parameter.isOptional ? " (optional)" : "");
+                    sb.Append(" - ");
+                    sb.Append(parameter.description + "\n");
+                }
             }
+        } else
+        {
+            var args = currentCommand.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (args.Count == 0)
+            {
+                result = "Error 257";
+                return false;
+            }
+
+            args.Remove(args.Last());
+            var newCommand = string.Join(" ", args);
+            if (!GetBranch(newCommand, out lastBranch, out errorMessage))
+            {
+                result = errorMessage;
+                return false;
+            }
+
+            sb.AppendLine(available);
         }
 
         result = sb.ToString();
         return true;
     }
 
-    public static List<string> GetOptions() { return new(); }
+    public static List<string> GetOptions() { return new List<string>(); }
 }

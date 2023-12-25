@@ -11,7 +11,7 @@ public class SecondBranch : SSCommandBranch
         parameters = new()
         {
             new("message", "Message", "What to show on screen"),
-            new("postfix", "", "", true),
+            new("postfix", "", "", typeof(string), true),
         };
     }
 

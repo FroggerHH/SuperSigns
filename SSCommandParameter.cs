@@ -3,7 +3,7 @@
 [Serializable]
 public class SSCommandParameter
 {
-    public readonly Type type = typeof(string);
+    public readonly Type type;
     public readonly string name;
     public readonly string displayName;
     public readonly string description;
@@ -11,10 +11,11 @@ public class SSCommandParameter
     public readonly bool hardChoose = false;
     private readonly List<object> acceptableValues;
 
-    public SSCommandParameter(string name, string displayName, string description, bool isOptional = false,
-        bool hardChoose = false, List<object> acceptableValues = null)
+    public SSCommandParameter(string name, string displayName, string description, Type type = null,
+        bool isOptional = false, bool hardChoose = false, List<object> acceptableValues = null)
     {
         this.name = name;
+        this.type = type ?? typeof(string);
         this.displayName = displayName;
         this.description = description;
         this.isOptional = isOptional;
