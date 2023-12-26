@@ -8,10 +8,10 @@ public class SecondBranch : SSCommandBranch
         displayName = "Second (has params)";
         description = "g_g";
         // this.parentBranch = CommandsRouter.SS_commands["longer"];
-        parameters = new()
+        parameters = new List<SSCommandParameter>
         {
-            new("message", "Message", "What to show on screen"),
-            new("postfix", "", "", typeof(string), true),
+            new SSCommandParameter("message", "Message", "What to show on screen"),
+            new SSCommandParameter("postfix", "", "", typeof(string), true)
         };
     }
 
@@ -22,7 +22,7 @@ public class SecondBranch : SSCommandBranch
         parameters.TryGetValue("message", out message);
         parameters.TryGetValue("postfix", out postfix);
 
-        m_localPlayer.Message(Center, (message + (string)postfix));
+        m_localPlayer.Message(Center, message + (string)postfix);
         return (CommandStatus.Ok, default);
     }
 }

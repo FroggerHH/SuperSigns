@@ -259,7 +259,9 @@ public static class CommandsRouter
             //     //     // sb.Append(parameter.description + "\n");
             //     // }
             // }
-        } else if (parameters.Count != 0 && branchFound)
+        }
+
+        if (parameters.Count != 0 && branchFound)
         {
             var par = parameters.Last();
             var commandParameter = lastBranch.parameters.Find(x => x.callName == par.Key);

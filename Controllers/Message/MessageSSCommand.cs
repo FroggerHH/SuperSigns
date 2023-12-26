@@ -7,15 +7,17 @@ public class MessageSSCommand : SSCommandController
         callName = "message";
         displayName = "Message";
         description = "Displays a message on the screen";
-        parameters = new()
+        parameters = new List<SSCommandParameter>
         {
-            new("messagetype", "MessageType", "Where the message will be displayed on the screen",
-                typeof(string), false, true, new() { "center", "topleft" }),
-            new("text", "Text", "The text that will be displayed on the screen"),
-            new("player", "Target player nick",
+            new SSCommandParameter("messagetype", "MessageType", "Where the message will be displayed on the screen",
+                typeof(string), false, true, new List<object> { "center", "topleft" }),
+            new SSCommandParameter("text", "Text", "The text that will be displayed on the screen"),
+            new SSCommandParameter("player", "Target player nick",
                 "Which player will be shown the message, leave it blank for the local player", typeof(string), true),
-            new("prefix", "Prefix", "It will be added to the beginning of the message", typeof(string), true),
-            new("postfix", "Postfix", "It will be added to the end of the message", typeof(string), true),
+            new SSCommandParameter("prefix", "Prefix", "It will be added to the beginning of the message",
+                typeof(string), true),
+            new SSCommandParameter("postfix", "Postfix", "It will be added to the end of the message", typeof(string),
+                true)
         };
     }
 
@@ -27,19 +29,19 @@ public class MessageSSCommand : SSCommandController
         object prefix;
         object postfix;
 
-        parameters.TryGetValue("messagetype", out object messageTypeObj);
+        parameters.TryGetValue("messagetype", out var messageTypeObj);
         parameters.TryGetValue("text", out text);
         parameters.TryGetValue("playerName", out playerName);
         parameters.TryGetValue("postfix", out postfix);
         parameters.TryGetValue("prefix", out prefix);
         messageType = messageTypeObj switch
         {
-            "center" => MessageHud.MessageType.Center,
-            "topleft" => MessageHud.MessageType.TopLeft,
-            _ => MessageHud.MessageType.Center
+            "center" => Center,
+            "topleft" => TopLeft,
+            _ => Center
         };
 
-        m_localPlayer.Message(messageType, ((string)prefix + text + postfix));
+        m_localPlayer.Message(messageType, (string)prefix + text + postfix);
         return (CommandStatus.Ok, default);
     }
 }

@@ -2,7 +2,7 @@
 
 public static class CodeSign
 {
-    private static HashSet<Sign> Signs = new();
+    private static readonly HashSet<Sign> Signs = new();
 
     public static HashSet<Sign> GetSigns()
     {
@@ -10,9 +10,5 @@ public static class CodeSign
         return Signs;
     }
 
-    public static void AddSign(Sign sign)
-    {
-        Signs.Add(sign);
-        
-    }
+    public static void AddSign(Sign sign) { Signs.Add(sign); }
 }

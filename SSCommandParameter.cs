@@ -3,13 +3,13 @@
 [Serializable]
 public class SSCommandParameter
 {
-    public readonly Type type;
-    public readonly string callName;
-    public readonly string displayName;
-    public readonly string description;
-    public readonly bool isOptional = false;
-    public readonly bool hardChoose = false;
     public readonly List<object> acceptableValues;
+    public readonly string callName;
+    public readonly string description;
+    public readonly string displayName;
+    public readonly bool hardChoose;
+    public readonly bool isOptional;
+    public readonly Type type;
 
     public SSCommandParameter(string callName, string displayName, string description, Type type = null,
         bool isOptional = false, bool hardChoose = false, List<object> acceptableValues = null)
@@ -20,7 +20,7 @@ public class SSCommandParameter
         this.description = description;
         this.isOptional = isOptional;
         this.hardChoose = hardChoose;
-        this.acceptableValues = acceptableValues ?? new();
+        this.acceptableValues = acceptableValues ?? new List<object>();
     }
 
     public override string ToString()
@@ -30,7 +30,7 @@ public class SSCommandParameter
         return s;
     }
 
-    public static implicit operator bool(SSCommandParameter parameter) => parameter is not null;
+    public static implicit operator bool(SSCommandParameter parameter) { return parameter is not null; }
 
     // [Serializable]
     // struct ParameterValue<T>
