@@ -4,7 +4,6 @@ public class PingSsCommand : SSCommandController
 {
     public PingSsCommand()
     {
-        Debug($"Init of PingSsCommand");
         callName = "ping";
         displayName = "Ping";
         description = "Fun ping-pong command";

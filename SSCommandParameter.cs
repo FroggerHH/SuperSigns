@@ -4,17 +4,17 @@
 public class SSCommandParameter
 {
     public readonly Type type;
-    public readonly string name;
+    public readonly string callName;
     public readonly string displayName;
     public readonly string description;
     public readonly bool isOptional = false;
     public readonly bool hardChoose = false;
-    private readonly List<object> acceptableValues;
+    public readonly List<object> acceptableValues;
 
-    public SSCommandParameter(string name, string displayName, string description, Type type = null,
+    public SSCommandParameter(string callName, string displayName, string description, Type type = null,
         bool isOptional = false, bool hardChoose = false, List<object> acceptableValues = null)
     {
-        this.name = name;
+        this.callName = callName;
         this.type = type ?? typeof(string);
         this.displayName = displayName;
         this.description = description;
@@ -25,7 +25,7 @@ public class SSCommandParameter
 
     public override string ToString()
     {
-        var s = $"Type: {type}, Name: {name}";
+        var s = $"callName: {callName}, type: {type.FullName}, hardChoose: {hardChoose}";
         if (isOptional) s += $", IsOptional: {isOptional}";
         return s;
     }

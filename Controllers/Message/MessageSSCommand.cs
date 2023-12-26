@@ -10,7 +10,7 @@ public class MessageSSCommand : SSCommandController
         parameters = new()
         {
             new("messagetype", "MessageType", "Where the message will be displayed on the screen",
-                typeof(string), false, true, new() { "Center", "TopLeft" }),
+                typeof(string), false, true, new() { "center", "topleft" }),
             new("text", "Text", "The text that will be displayed on the screen"),
             new("player", "Target player nick",
                 "Which player will be shown the message, leave it blank for the local player", typeof(string), true),
@@ -32,7 +32,12 @@ public class MessageSSCommand : SSCommandController
         parameters.TryGetValue("playerName", out playerName);
         parameters.TryGetValue("postfix", out postfix);
         parameters.TryGetValue("prefix", out prefix);
-        messageType = (MessageHud.MessageType)messageTypeObj;
+        messageType = messageTypeObj switch
+        {
+            "center" => MessageHud.MessageType.Center,
+            "topleft" => MessageHud.MessageType.TopLeft,
+            _ => MessageHud.MessageType.Center
+        };
 
         m_localPlayer.Message(messageType, ((string)prefix + text + postfix));
         return (CommandStatus.Ok, default);

@@ -20,5 +20,5 @@ public class SSCommandBranch
     public override string ToString() =>
         $"callName: {callName}, displayName: {displayName}, "
         + $"branches: {branches?.Select(x => x.callName).GetString() ?? "null"}, "
-        + $"parameters: {parameters?.Select(x => x.name).GetString() ?? "null"}";
+        + $"parameters: {parameters?.Select(x => x.callName).GetString() ?? "null"}";
 }
