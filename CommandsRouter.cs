@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.RegularExpressions;
 using SuperSigns.Controllers;
 using SuperSigns.Controllers.Longer;
 using SuperSigns.Controllers.Message;
@@ -12,6 +13,8 @@ public static class CommandsRouter
     public static readonly Dictionary<string, SSCommandController> SS_commands;
     public static readonly List<string> commandNames;
     public static string currentCommand;
+
+    // private static string[] TestSmartSplit() => currentCommand.SmartSplit().RemoveEmptyEntries().ToArray();
 
     static CommandsRouter()
     {
@@ -29,7 +32,7 @@ public static class CommandsRouter
     public static (CommandStatus status, string exceptionMessage) TryRunCommand(string str)
     {
         str = str.Replace("ss ", "");
-        var args = str.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        var args = str.SmartSplit().RemoveEmptyEntries().ToList();
         var commandName = args[0];
         var logic = Logic();
         Debug($"status = '{logic.status}', exceptionMessage = '{logic.exceptionMessage}'");
@@ -75,13 +78,12 @@ public static class CommandsRouter
     {
         commandline = commandline.Replace("ss ", "");
         errorMessage = string.Empty;
-        var args = commandline.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
-            .Where(x => x.Contains(':')).ToList();
+        var args = commandline.SmartSplit().RemoveEmptyEntries().Where(x => x.Contains(':')).ToList();
         result = new Dictionary<string, object>();
 
         foreach (var arg in args)
         {
-            var list_ = arg.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var list_ = arg.SmartSplit(":").RemoveEmptyEntries().ToList();
             if (list_.Count != 2)
             {
                 errorMessage = $"Command parameter {arg} is not in valid format. Should be 'parameterName:value'";
@@ -103,11 +105,16 @@ public static class CommandsRouter
         commandline = commandline.Replace("ss ", "");
         lastBranch = null;
         errorMessage = string.Empty;
-        var args = commandline.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Where(x => !x.Contains(':'))
-            .ToList();
+        var args = commandline.SmartSplit().RemoveEmptyEntries().Where(x => !x.Contains(':')).ToList();
         if (commandline.Replace(" ", "") == "ss")
         {
             errorMessage = "SS is not a command itself. Use one of its branches";
+            return false;
+        }
+
+        if (args.Count == 0)
+        {
+            errorMessage = "Error else split args, args.Count == 0";
             return false;
         }
 
@@ -190,6 +197,9 @@ public static class CommandsRouter
                 errorMessage = $"Unknown error casting {paramValue} to {parameter.type}.\n{e.Message}";
                 return false;
             }
+
+            if (paramValue is string && paramValue.ToString().StartsWith("\"") && paramValue.ToString().EndsWith("\""))
+                paramValue = paramValue.ToString().Substring(1, paramValue.ToString().Length - 2);
 
             newArgs[paramName] = paramValue;
         }
@@ -306,7 +316,7 @@ public static class CommandsRouter
     private static string GetCommandWithoutLastBranch(out string error)
     {
         error = string.Empty;
-        var args = currentCommand.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        var args = currentCommand.SmartSplit().RemoveEmptyEntries().ToList();
         if (args.Count == 0)
         {
             error = "Error else split args";
@@ -323,11 +333,15 @@ public static class CommandsRouter
 
     private static Dictionary<string, string> GetParameters()
     {
-        return currentCommand.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
-            .Where(x => x.Contains(':')).ToDictionary(x => x.Split(':')[0], x =>
+        return currentCommand.SmartSplit().RemoveEmptyEntries()
+            .Where(x => x.Contains(':')).ToDictionary(x =>
             {
-                var split = x.Split(':');
-                return split.Length > 1 ? split[1] : "";
+                var split = x.SmartSplit(":").RemoveEmptyEntries().ToList();
+                return split.Count > 0 ? split[0] : "";
+            }, x =>
+            {
+                var split = x.SmartSplit(":").RemoveEmptyEntries().ToList();
+                return split.Count > 1 ? split[1] : "";
             });
     }
 
@@ -378,7 +392,8 @@ public static class CommandsRouter
 
         if (lastBranch.branches.Count > 0) return lastBranch.branches.Select(x => x.callName).ToList();
         if (lastBranch.parameters.Count > 0)
-            return lastBranch.parameters.Select(x => $"{x.callName}:").ToList();
+            return lastBranch.parameters.Select(x =>
+                $"{x.callName}:{((x.type == typeof(string) && !x.hardChoose) ? "\"\"" : "")}").ToList();
 
         return result;
     }
